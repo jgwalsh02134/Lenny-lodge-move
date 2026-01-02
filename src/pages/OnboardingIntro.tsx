@@ -1,17 +1,12 @@
-import type { HumorDial } from "../lib/lennySettings";
 import { LennyAvatar } from "../components/LennyAvatar";
 
 type OnboardingIntroProps = {
-  humorDial: HumorDial;
   onBegin: () => void;
   onSkip: () => void;
 };
 
-export function OnboardingIntro({ humorDial, onBegin, onSkip }: OnboardingIntroProps) {
-  const dryLine =
-    humorDial === "low"
-      ? null
-      : "I’ll keep this organized. You keep your calendar mostly intact.";
+export function OnboardingIntro({ onBegin, onSkip }: OnboardingIntroProps) {
+  const dryLine = "I’ll keep this organized. You keep your calendar mostly intact.";
 
   return (
     <div style={{ maxWidth: 880, margin: "0 auto", padding: 16 }}>
@@ -42,7 +37,7 @@ export function OnboardingIntro({ humorDial, onBegin, onSkip }: OnboardingIntroP
           <p style={{ marginTop: 0, lineHeight: 1.5 }}>
             We’ll start with a few select-only questions. Your answers change the plan — and they change what “easy” means.
           </p>
-          {dryLine ? <p style={{ marginTop: 0, lineHeight: 1.5, opacity: 0.9 }}>{dryLine}</p> : null}
+          <p style={{ marginTop: 0, lineHeight: 1.5, opacity: 0.9 }}>{dryLine}</p>
 
           <div style={{ display: "flex", gap: 10, marginTop: 14, alignItems: "center" }}>
             <button

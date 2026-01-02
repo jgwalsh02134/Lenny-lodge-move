@@ -2,10 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { postJSON } from "./lib/api";
 import { AskLennyDrawer } from "./components/AskLennyDrawer";
-import {
-  getSeriousMode,
-  setSeriousMode as persistSeriousMode,
-} from "./lib/lennySettings";
 import { AppShell } from "./components/AppShell";
 import { OnboardingIntro } from "./pages/OnboardingIntro";
 import { FoundationWizardPage } from "./pages/FoundationWizardPage";
@@ -46,19 +42,11 @@ function App() {
 
   // Research state
   const [researchQuery, setResearchQuery] = useState("");
-  const [seriousMode, setSeriousMode] = useState(false);
-  const [allowedDomainsInput, setAllowedDomainsInput] = useState("");
   const [researchLoading, setResearchLoading] = useState(false);
   const [researchError, setResearchError] = useState<string | null>(null);
   const [researchResult, setResearchResult] = useState<ResearchResponse | null>(null);
 
-  const allowedDomains = useMemo(() => {
-    const parts = allowedDomainsInput
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    return parts.length ? parts : undefined;
-  }, [allowedDomainsInput]);
+  const allowedDomains = useMemo(() => undefined, []);
 
   // Import state
   const [importUrl, setImportUrl] = useState("");
@@ -66,15 +54,12 @@ function App() {
   const [importError, setImportError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<ImportResponse | null>(null);
 
-  // Humor dial is now internal-only:
-  // - default "medium"
-  // - forced "low" when Serious Mode is on
-  const effectiveHumorDial = seriousMode ? "low" : "medium";
+  const showDevTools =
+    import.meta.env.DEV ||
+    (typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("dev") === "1");
 
   useEffect(() => {
-    // Hydrate persisted header modes
-    setSeriousMode(getSeriousMode());
-
     try {
       const w = window.localStorage.getItem("lenny.welcomed");
       const isWelcomed = w === "1";
@@ -94,10 +79,6 @@ function App() {
     }
   }, []);
 
-  useEffect(() => {
-    persistSeriousMode(seriousMode);
-  }, [seriousMode]);
-
   async function runResearch() {
     setResearchLoading(true);
     setResearchError(null);
@@ -105,8 +86,6 @@ function App() {
     try {
       const data = await postJSON<ResearchResponse>("/api/ai/research", {
         query: researchQuery,
-        seriousMode,
-        humorDial: effectiveHumorDial,
         allowedDomains,
       });
       setResearchResult(data);
@@ -133,13 +112,9 @@ function App() {
 
   return (
     <>
-      <AppShell
-        seriousMode={seriousMode}
-        onSeriousModeChange={(v) => setSeriousMode(v)}
-      >
+      <AppShell>
         {view === "intro" ? (
           <OnboardingIntro
-            humorDial={effectiveHumorDial}
             onBegin={() => {
               try {
                 window.localStorage.setItem("lenny.welcomed", "1");
@@ -191,8 +166,12 @@ function App() {
                 </button>
                 <button
                   onClick={() => {
-                    setShowApiTester(true);
                     setTab("import");
+                    if (!showDevTools) {
+                      alert("Coming soon: listings will be connected to the import flow.");
+                      return;
+                    }
+                    setShowApiTester(true);
                   }}
                   style={{
                     padding: "14px 16px",
@@ -213,21 +192,23 @@ function App() {
               </div>
             </div>
 
-            <div style={{ marginTop: 14 }}>
-              <button
-                onClick={() => setShowApiTester((v) => !v)}
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: 12,
-                  border: "1px solid rgba(0,0,0,0.10)",
-                  background: "transparent",
-                }}
-              >
-                {showApiTester ? "Hide" : "Show"} API Tester
-              </button>
-            </div>
+            {showDevTools ? (
+              <div style={{ marginTop: 14 }}>
+                <button
+                  onClick={() => setShowApiTester((v) => !v)}
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: 12,
+                    border: "1px solid rgba(0,0,0,0.10)",
+                    background: "transparent",
+                  }}
+                >
+                  {showApiTester ? "Hide" : "Show"} Developer Tools
+                </button>
+              </div>
+            ) : null}
 
-            {showApiTester ? (
+            {showDevTools && showApiTester ? (
               <div
                 style={{
                   marginTop: 12,
@@ -239,10 +220,7 @@ function App() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                  <h2 style={{ marginTop: 0, marginBottom: 6, fontSize: 18 }}>API Tester</h2>
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>
-                    Modes: Serious {seriousMode ? "ON" : "OFF"}
-                  </div>
+                  <h2 style={{ marginTop: 0, marginBottom: 6, fontSize: 18 }}>Developer Tools</h2>
                 </div>
 
                 <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
@@ -264,7 +242,7 @@ function App() {
 
                 {tab === "research" ? (
                   <div>
-                    <h3 style={{ marginTop: 0 }}>Research (POST /api/ai/research)</h3>
+                    <h3 style={{ marginTop: 0 }}>Research</h3>
                     <label style={{ display: "block", marginBottom: 8 }}>
                       Query
                       <textarea
@@ -273,16 +251,6 @@ function App() {
                         rows={6}
                         style={{ width: "100%", marginTop: 6 }}
                         placeholder="What is the typical NY home closing timeline?"
-                      />
-                    </label>
-
-                    <label style={{ display: "block", marginTop: 12 }}>
-                      Allowed domains (comma-separated, optional)
-                      <input
-                        value={allowedDomainsInput}
-                        onChange={(e) => setAllowedDomainsInput(e.target.value)}
-                        style={{ width: "100%", marginTop: 6 }}
-                        placeholder="ny.gov, nysba.org"
                       />
                     </label>
 
@@ -335,7 +303,7 @@ function App() {
                   </div>
                 ) : (
                   <div>
-                    <h3 style={{ marginTop: 0 }}>Import Listing (POST /api/listings/import)</h3>
+                    <h3 style={{ marginTop: 0 }}>Import Listing</h3>
                     <label style={{ display: "block", marginBottom: 8 }}>
                       Listing URL
                       <input
@@ -423,7 +391,7 @@ function App() {
         )}
       </AppShell>
 
-      <AskLennyDrawer humorDial={effectiveHumorDial} seriousMode={seriousMode} />
+      <AskLennyDrawer />
     </>
   );
 }

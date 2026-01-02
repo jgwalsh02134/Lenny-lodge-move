@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import type { HumorDial } from "../lib/lennySettings";
+import { useEffect, useState } from "react";
 import { streamChat } from "../lib/api";
 
 type Msg = {
@@ -10,31 +9,17 @@ type Msg = {
 };
 
 type AskLennyDrawerProps = {
-  humorDial: HumorDial;
-  seriousMode: boolean;
 };
 
-export function AskLennyDrawer({ humorDial, seriousMode }: AskLennyDrawerProps) {
+export function AskLennyDrawer({}: AskLennyDrawerProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [researchMode, setResearchMode] = useState(false);
-  const [allowedDomainsInput, setAllowedDomainsInput] = useState("");
 
-  const modeText = useMemo(() => {
-    return `Serious Mode ${seriousMode ? "ON" : "OFF"} • Humor Dial ${humorDial}`;
-  }, [humorDial, seriousMode]);
-
-  const allowedDomains = useMemo(() => {
-    if (!researchMode) return undefined;
-    const parts = allowedDomainsInput
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    return parts.length ? parts : undefined;
-  }, [allowedDomainsInput, researchMode]);
+  // No domain allowlisting UI; research mode uses internet + citations with no user filters.
 
   function loadPersisted() {
     try {
@@ -96,10 +81,7 @@ export function AskLennyDrawer({ humorDial, seriousMode }: AskLennyDrawerProps) 
         {
           message: text,
           history,
-          seriousMode,
-          humorDial,
           researchMode,
-          allowedDomains,
         },
         {
           onDelta: (delta) => {
@@ -128,7 +110,15 @@ export function AskLennyDrawer({ humorDial, seriousMode }: AskLennyDrawerProps) 
       );
     } catch (err) {
       setIsStreaming(false);
-      setError(err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("Missing OPENAI_API_KEY")) {
+        const hint = import.meta.env.DEV
+          ? " Add OPENAI_API_KEY to Cloudflare Pages secrets or local .dev.vars."
+          : "";
+        setError(`Chat isn’t configured yet. The server is missing its API key.${hint}`);
+      } else {
+        setError("Chat couldn’t be reached right now. Please try again.");
+      }
     }
   }
 
@@ -198,7 +188,7 @@ export function AskLennyDrawer({ humorDial, seriousMode }: AskLennyDrawerProps) 
             >
               <div>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>Ask Lenny</div>
-                <div style={{ fontSize: 12, opacity: 0.75 }}>{modeText}</div>
+                <div style={{ fontSize: 12, opacity: 0.75 }}>Ask a question. I’ll keep it practical.</div>
               </div>
               <button
                 onClick={() => setOpen(false)}
@@ -221,28 +211,8 @@ export function AskLennyDrawer({ humorDial, seriousMode }: AskLennyDrawerProps) 
                   onChange={(e) => setResearchMode(e.target.checked)}
                   disabled={isStreaming}
                 />
-                Research mode (internet + citations)
+                Research (uses internet + citations)
               </label>
-              {researchMode ? (
-                <div style={{ marginTop: 10 }}>
-                  <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>
-                    Allowed domains (comma-separated, optional)
-                  </div>
-                  <input
-                    value={allowedDomainsInput}
-                    onChange={(e) => setAllowedDomainsInput(e.target.value)}
-                    disabled={isStreaming}
-                    placeholder="ny.gov, nysba.org"
-                    style={{
-                      width: "100%",
-                      borderRadius: 10,
-                      border: "1px solid rgba(0,0,0,0.12)",
-                      padding: "8px 10px",
-                      fontSize: 13,
-                    }}
-                  />
-                </div>
-              ) : null}
               {error ? (
                 <div style={{ marginTop: 10, fontSize: 12, color: "crimson" }}>{error}</div>
               ) : null}

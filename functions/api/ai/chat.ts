@@ -1,6 +1,4 @@
 import { z } from "zod";
-import { buildSystemPrompt } from "../../../src/lib/lennyPrompt";
-
 // NOTE: This file runs on Cloudflare Pages Functions (server-side). No keys ever go to the browser.
 
 type Env = {
@@ -17,9 +15,8 @@ const HistoryItemSchema = z.object({
 const BodySchema = z.object({
   message: z.string().trim().min(1, "message is required"),
   history: z.array(HistoryItemSchema).optional(),
-  seriousMode: z.boolean().optional(),
-  humorDial: z.enum(["low", "medium", "high"]).optional(),
   researchMode: z.boolean().optional(),
+  // Internal-only safeguard (not user-facing). We may use this later.
   allowedDomains: z.array(z.string().trim().min(1)).optional(),
 });
 
@@ -38,13 +35,48 @@ function isEventStreamRequest(req: Request) {
   return accept.includes("text/event-stream");
 }
 
+function looksLegalOrTaxOrContract(text: string): boolean {
+  const t = text.toLowerCase();
+  return [
+    "contract",
+    "contingency",
+    "attorney",
+    "attorney review",
+    "legal",
+    "tax",
+    "irs",
+    "capital gains",
+    "transfer tax",
+    "title",
+    "escrow",
+    "closing disclosure",
+    "mortgage",
+    "lender",
+  ].some((k) => t.includes(k));
+}
+
+function buildSystemPrompt(userMessage: string): string {
+  const base = `
+You are "Lenny Lodge" — a host specialist for a NY move planner.
+Tone: calm, professional, and practical. Light dry humor is allowed, but never forced.
+Hard rules:
+- Never joke about death, loss, aging, or money anxiety.
+- Avoid forced emotional language. Be sensitive and practical.
+- Keep answers structured and actionable.
+- Explain why questions matter and how answers change outcomes.
+`;
+
+  const disclaimer = looksLegalOrTaxOrContract(userMessage)
+    ? `\nIf the user asks about legal/tax/contract topics, include: "Educational guidance only; consult a NY real estate attorney/CPA as appropriate."\n`
+    : "";
+
+  return (base + disclaimer).trim();
+}
+
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const key = ctx.env.OPENAI_API_KEY;
   if (!key) {
-    return jsonResponse(
-      { ok: false, error: "Missing OPENAI_API_KEY (set as Pages secret / local .dev.vars)" },
-      { status: 500 },
-    );
+    return jsonResponse({ ok: false, error: "Missing OPENAI_API_KEY" }, { status: 500 });
   }
 
   let body: z.infer<typeof BodySchema>;
@@ -61,11 +93,9 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     );
   }
 
-  const seriousMode = body.seriousMode ?? false;
-  const humorDial = (body.humorDial ?? "medium") as "low" | "medium" | "high";
   const researchMode = body.researchMode ?? false;
 
-  const systemPrompt = buildSystemPrompt({ seriousMode, humorDial });
+  const systemPrompt = buildSystemPrompt(body.message);
 
   const inputMessages = [
     { role: "system", content: systemPrompt },
@@ -83,22 +113,14 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   if (wantsStream) {
     payload.stream = true;
     if (researchMode) {
-      payload.tools = [
-        body.allowedDomains?.length
-          ? { type: "web_search", filters: { allowed_domains: body.allowedDomains } }
-          : { type: "web_search" },
-      ];
+      payload.tools = [{ type: "web_search" }];
       payload.include = ["web_search_call.action.sources"];
     }
   } else {
     // non-stream mode returns JSON directly
     payload.stream = false;
     if (researchMode) {
-      payload.tools = [
-        body.allowedDomains?.length
-          ? { type: "web_search", filters: { allowed_domains: body.allowedDomains } }
-          : { type: "web_search" },
-      ];
+      payload.tools = [{ type: "web_search" }];
       payload.include = ["web_search_call.action.sources"];
     }
   }
@@ -121,13 +143,100 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   }
 
   if (!upstream.ok) {
+    // If streaming was requested but OpenAI fails, fall back to a non-stream call and return JSON.
+    if (wantsStream) {
+      try {
+        const fallbackPayload = { ...payload, stream: false };
+        const fb = await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${key}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify(fallbackPayload),
+        });
+        if (fb.ok) {
+          const rawText = await fb.text();
+          let raw: any = null;
+          try {
+            raw = JSON.parse(rawText);
+          } catch {
+            return new Response(rawText, { status: 200, headers: { "content-type": "application/json" } });
+          }
+
+          const output: any[] = Array.isArray(raw?.output) ? raw.output : [];
+          const message = output.find((o) => o?.type === "message");
+          const content: any[] = Array.isArray(message?.content) ? message.content : [];
+
+          const textParts: string[] = [];
+          for (const item of content) {
+            if (item?.type === "output_text" && typeof item?.text === "string") {
+              textParts.push(item.text);
+            }
+          }
+
+          const sources: Array<{ url: string; title?: string }> = [];
+          for (const o of output) {
+            if (o?.type !== "web_search_call") continue;
+            const srcs: any[] = Array.isArray(o?.action?.sources) ? o.action.sources : [];
+            for (const s of srcs) {
+              if (typeof s?.url === "string" && s.url.length > 0) {
+                sources.push({ url: s.url, ...(typeof s?.title === "string" ? { title: s.title } : {}) });
+              }
+            }
+          }
+
+          return jsonResponse({ ok: true, text: textParts.join("\n\n").trim(), sources, raw });
+        }
+      } catch {
+        // swallow and return the original upstream error below
+      }
+    }
+
     const text = await upstream.text();
-    return new Response(text, { status: upstream.status, headers: { "content-type": "text/plain" } });
+    return new Response(text, {
+      status: upstream.status,
+      headers: { "content-type": "text/plain" },
+    });
   }
 
   if (!wantsStream) {
-    const text = await upstream.text();
-    return new Response(text, { status: 200, headers: { "content-type": "application/json" } });
+    const rawText = await upstream.text();
+    let raw: any = null;
+    try {
+      raw = JSON.parse(rawText);
+    } catch {
+      return new Response(rawText, { status: 200, headers: { "content-type": "application/json" } });
+    }
+
+    const output: any[] = Array.isArray(raw?.output) ? raw.output : [];
+    const message = output.find((o) => o?.type === "message");
+    const content: any[] = Array.isArray(message?.content) ? message.content : [];
+
+    const textParts: string[] = [];
+    for (const item of content) {
+      if (item?.type === "output_text" && typeof item?.text === "string") {
+        textParts.push(item.text);
+      }
+    }
+
+    const sources: Array<{ url: string; title?: string }> = [];
+    for (const o of output) {
+      if (o?.type !== "web_search_call") continue;
+      const srcs: any[] = Array.isArray(o?.action?.sources) ? o.action.sources : [];
+      for (const s of srcs) {
+        if (typeof s?.url === "string" && s.url.length > 0) {
+          sources.push({ url: s.url, ...(typeof s?.title === "string" ? { title: s.title } : {}) });
+        }
+      }
+    }
+
+    return jsonResponse({
+      ok: true,
+      text: textParts.join("\n\n").trim(),
+      sources,
+      raw,
+    });
   }
 
   if (!upstream.body) {

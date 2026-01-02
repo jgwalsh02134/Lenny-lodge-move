@@ -28,8 +28,6 @@ export async function postJSON<TResponse>(
   return json as TResponse;
 }
 
-import { streamSSE } from "./sse";
-
 export async function streamChat(
   body: any,
   handlers: {
@@ -52,44 +50,107 @@ export async function streamChat(
   }
 
   function extractSources(obj: any): any[] | null {
-    const src = obj?.action?.sources ?? obj?.sources;
+    const src =
+      obj?.action?.sources ??
+      obj?.sources ??
+      obj?.item?.action?.sources ??
+      obj?.output?.action?.sources;
     return Array.isArray(src) ? src : null;
   }
 
   let doneCalled = false;
 
-  await streamSSE("/api/ai/chat", body, (evt) => {
-    const data = evt.data;
-    if (data === "[DONE]") {
-      if (!doneCalled) {
-        doneCalled = true;
-        onDone();
-      }
-      return;
-    }
-
-    let obj: any = null;
-    try {
-      obj = JSON.parse(data);
-    } catch {
-      // If upstream ever emits plain-text deltas, ignore for safety in MVP.
-      return;
-    }
-
-    const delta = extractDelta(obj);
-    if (delta) onDelta(delta);
-
-    const sources = extractSources(obj);
-    if (sources && onSources) onSources(sources);
-
-    const type = obj?.type;
-    if (typeof type === "string" && (type === "response.completed" || type === "response.done")) {
-      if (!doneCalled) {
-        doneCalled = true;
-        onDone();
-      }
-    }
+  // Prefer SSE streaming. If the server falls back to JSON, handle that too.
+  const resp = await fetch("/api/ai/chat", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      accept: "text/event-stream",
+    },
+    body: JSON.stringify(body),
   });
+
+  const ct = resp.headers.get("content-type") ?? "";
+
+  if (!resp.ok) {
+    let errMsg = `Request failed (${resp.status})`;
+    try {
+      const j = await resp.json();
+      if (j?.error) errMsg = String(j.error);
+    } catch {
+      // ignore
+    }
+    throw new Error(errMsg);
+  }
+
+  if (ct.includes("application/json")) {
+    const j = await resp.json();
+    if (typeof j?.text === "string" && j.text) onDelta(j.text);
+    if (onSources && Array.isArray(j?.sources)) onSources(j.sources);
+    onDone();
+    return;
+  }
+
+  if (!resp.body) {
+    throw new Error("SSE response has no body");
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let idx: number;
+    while ((idx = buffer.indexOf("\n\n")) !== -1) {
+      const raw = buffer.slice(0, idx);
+      buffer = buffer.slice(idx + 2);
+
+      const lines = raw.split("\n").map((l) => l.trimEnd());
+      let data = "";
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        if (trimmed.startsWith("data:")) {
+          const d = trimmed.slice("data:".length).trimStart();
+          data = data ? `${data}\n${d}` : d;
+        }
+      }
+
+      if (!data) continue;
+      if (data === "[DONE]") {
+        if (!doneCalled) {
+          doneCalled = true;
+          onDone();
+        }
+        continue;
+      }
+
+      let obj: any = null;
+      try {
+        obj = JSON.parse(data);
+      } catch {
+        continue;
+      }
+
+      const delta = extractDelta(obj);
+      if (delta) onDelta(delta);
+
+      const sources = extractSources(obj);
+      if (sources && onSources) onSources(sources);
+
+      const type = obj?.type;
+      if (typeof type === "string" && (type === "response.completed" || type === "response.done")) {
+        if (!doneCalled) {
+          doneCalled = true;
+          onDone();
+        }
+      }
+    }
+  }
 
   if (!doneCalled) onDone();
 }
