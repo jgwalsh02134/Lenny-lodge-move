@@ -1,4 +1,7 @@
 {
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types"]
+  },
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },

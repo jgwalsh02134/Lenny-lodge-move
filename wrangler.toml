@@ -1,0 +1,6 @@
+name = "lenny-lodge-move"
+compatibility_date = "2025-10-08"
+
+[pages]
+build_output_dir = "dist"
+
