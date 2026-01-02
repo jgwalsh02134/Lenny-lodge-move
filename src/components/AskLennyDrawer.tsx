@@ -1,10 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { HumorDial } from "../lib/lennySettings";
+import { streamChat } from "../lib/api";
 
 type Msg = {
   id: string;
-  role: "user" | "lenny";
-  text: string;
+  role: "user" | "assistant";
+  content: string;
+  sources?: Array<{ url?: string; title?: string }>;
 };
 
 type AskLennyDrawerProps = {
@@ -16,24 +18,118 @@ export function AskLennyDrawer({ humorDial, seriousMode }: AskLennyDrawerProps) 
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [researchMode, setResearchMode] = useState(false);
+  const [allowedDomainsInput, setAllowedDomainsInput] = useState("");
 
   const modeText = useMemo(() => {
     return `Serious Mode ${seriousMode ? "ON" : "OFF"} • Humor Dial ${humorDial}`;
   }, [humorDial, seriousMode]);
 
-  function send() {
+  const allowedDomains = useMemo(() => {
+    if (!researchMode) return undefined;
+    const parts = allowedDomainsInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return parts.length ? parts : undefined;
+  }, [allowedDomainsInput, researchMode]);
+
+  function loadPersisted() {
+    try {
+      const raw = window.localStorage.getItem("lenny.chat");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      const cleaned: Msg[] = parsed
+        .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+        .slice(-30)
+        .map((m: any) => ({
+          id: String(m.id ?? `${Date.now()}-${Math.random()}`),
+          role: m.role,
+          content: m.content,
+          sources: Array.isArray(m.sources) ? m.sources : undefined,
+        }));
+      setMessages(cleaned);
+    } catch {
+      // ignore
+    }
+  }
+
+  function persist(next: Msg[]) {
+    try {
+      window.localStorage.setItem("lenny.chat", JSON.stringify(next.slice(-30)));
+    } catch {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    loadPersisted();
+  }, []);
+
+  async function send() {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || isStreaming) return;
     setDraft("");
-    setMessages((prev) => [
-      ...prev,
-      { id: `${Date.now()}-u`, role: "user", text },
-      {
-        id: `${Date.now()}-l`,
-        role: "lenny",
-        text: "Got it. I can help with that — next I’ll be wired to the research endpoint.",
-      },
-    ]);
+    setError(null);
+    setIsStreaming(true);
+
+    const userMsg: Msg = { id: `${Date.now()}-u`, role: "user", content: text };
+    const assistantId = `${Date.now()}-a`;
+    const assistantMsg: Msg = { id: assistantId, role: "assistant", content: "" };
+
+    setMessages((prev) => {
+      const next = [...prev, userMsg, assistantMsg].slice(-30);
+      persist(next);
+      return next;
+    });
+
+    const history = messages
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .slice(-28)
+      .map((m) => ({ role: m.role, content: m.content }));
+
+    try {
+      await streamChat(
+        {
+          message: text,
+          history,
+          seriousMode,
+          humorDial,
+          researchMode,
+          allowedDomains,
+        },
+        {
+          onDelta: (delta) => {
+            setMessages((prev) => {
+              const next = prev.map((m) =>
+                m.id === assistantId ? { ...m, content: (m.content ?? "") + delta } : m,
+              );
+              persist(next);
+              return next;
+            });
+          },
+          onSources: (sources) => {
+            if (!Array.isArray(sources)) return;
+            setMessages((prev) => {
+              const next = prev.map((m) =>
+                m.id === assistantId ? { ...m, sources } : m,
+              );
+              persist(next);
+              return next;
+            });
+          },
+          onDone: () => {
+            setIsStreaming(false);
+          },
+        },
+      );
+    } catch (err) {
+      setIsStreaming(false);
+      setError(err instanceof Error ? err.message : String(err));
+    }
   }
 
   return (
@@ -117,34 +213,86 @@ export function AskLennyDrawer({ humorDial, seriousMode }: AskLennyDrawerProps) 
               </button>
             </div>
 
+            <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
+              <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
+                <input
+                  type="checkbox"
+                  checked={researchMode}
+                  onChange={(e) => setResearchMode(e.target.checked)}
+                  disabled={isStreaming}
+                />
+                Research mode (internet + citations)
+              </label>
+              {researchMode ? (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>
+                    Allowed domains (comma-separated, optional)
+                  </div>
+                  <input
+                    value={allowedDomainsInput}
+                    onChange={(e) => setAllowedDomainsInput(e.target.value)}
+                    disabled={isStreaming}
+                    placeholder="ny.gov, nysba.org"
+                    style={{
+                      width: "100%",
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.12)",
+                      padding: "8px 10px",
+                      fontSize: 13,
+                    }}
+                  />
+                </div>
+              ) : null}
+              {error ? (
+                <div style={{ marginTop: 10, fontSize: 12, color: "crimson" }}>{error}</div>
+              ) : null}
+            </div>
+
             <div style={{ padding: 16, overflow: "auto", flex: 1 }}>
               {messages.length === 0 ? (
                 <div style={{ fontSize: 13, opacity: 0.75 }}>
-                  Ask anything. For now I’ll respond with a placeholder until we wire up the
-                  research endpoint here.
+                  Ask anything. I’ll stream the response as it arrives.
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {messages.map((m) => (
-                    <div
-                      key={m.id}
-                      style={{
-                        alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                        maxWidth: "90%",
-                        padding: "10px 12px",
-                        borderRadius: 12,
-                        background: m.role === "user" ? "#111" : "#f2f3f5",
-                        color: m.role === "user" ? "#fff" : "#111",
-                        border:
-                          m.role === "user"
-                            ? "1px solid rgba(0,0,0,0.12)"
-                            : "1px solid rgba(0,0,0,0.06)",
-                        whiteSpace: "pre-wrap",
-                        lineHeight: 1.35,
-                        fontSize: 13,
-                      }}
-                    >
-                      {m.text}
+                    <div key={m.id} style={{ display: "grid", gap: 6, alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "90%" }}>
+                      <div
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: 12,
+                          background: m.role === "user" ? "#111" : "#f2f3f5",
+                          color: m.role === "user" ? "#fff" : "#111",
+                          border:
+                            m.role === "user"
+                              ? "1px solid rgba(0,0,0,0.12)"
+                              : "1px solid rgba(0,0,0,0.06)",
+                          whiteSpace: "pre-wrap",
+                          lineHeight: 1.35,
+                          fontSize: 13,
+                        }}
+                      >
+                        {m.content || (m.role === "assistant" && isStreaming ? "…" : "")}
+                      </div>
+
+                      {m.role === "assistant" && m.sources?.length ? (
+                        <div style={{ fontSize: 12, opacity: 0.8 }}>
+                          <div style={{ fontWeight: 700, marginBottom: 4 }}>Sources</div>
+                          <ul style={{ margin: 0, paddingLeft: 18 }}>
+                            {m.sources.slice(0, 6).map((s, idx) => (
+                              <li key={`${s.url ?? idx}-${idx}`}>
+                                {s.url ? (
+                                  <a href={s.url} target="_blank" rel="noreferrer">
+                                    {s.title ?? s.url}
+                                  </a>
+                                ) : (
+                                  s.title ?? "(source)"
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -164,6 +312,7 @@ export function AskLennyDrawer({ humorDial, seriousMode }: AskLennyDrawerProps) 
                 onChange={(e) => setDraft(e.target.value)}
                 rows={3}
                 placeholder="Ask Lenny…"
+                disabled={isStreaming}
                 style={{
                   width: "100%",
                   resize: "vertical",
@@ -179,6 +328,7 @@ export function AskLennyDrawer({ humorDial, seriousMode }: AskLennyDrawerProps) 
                   onClick={() => {
                     setDraft("");
                   }}
+                  disabled={isStreaming}
                   style={{
                     padding: "8px 12px",
                     borderRadius: 10,
@@ -190,17 +340,17 @@ export function AskLennyDrawer({ humorDial, seriousMode }: AskLennyDrawerProps) 
                 </button>
                 <button
                   onClick={send}
-                  disabled={draft.trim().length === 0}
+                  disabled={draft.trim().length === 0 || isStreaming}
                   style={{
                     padding: "8px 12px",
                     borderRadius: 10,
                     border: "1px solid rgba(0,0,0,0.12)",
                     background: "#111",
                     color: "#fff",
-                    opacity: draft.trim().length === 0 ? 0.5 : 1,
+                    opacity: draft.trim().length === 0 || isStreaming ? 0.5 : 1,
                   }}
                 >
-                  Send
+                  {isStreaming ? "Sending…" : "Send"}
                 </button>
               </div>
             </div>
