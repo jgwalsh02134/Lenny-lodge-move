@@ -3,6 +3,7 @@ import { z } from "zod";
 
 type Env = {
   OPENAI_API_KEY?: string;
+  XAI_API_KEY?: string;
 };
 
 const MODEL = "gpt-4o-mini";
@@ -15,9 +16,7 @@ const HistoryItemSchema = z.object({
 const BodySchema = z.object({
   message: z.string().trim().min(1, "message is required"),
   history: z.array(HistoryItemSchema).optional(),
-  researchMode: z.boolean().optional(),
-  // Internal-only safeguard (not user-facing). We may use this later.
-  allowedDomains: z.array(z.string().trim().min(1)).optional(),
+  context: z.any().optional(),
 });
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
@@ -76,7 +75,7 @@ Hard rules:
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const key = ctx.env.OPENAI_API_KEY;
   if (!key) {
-    return jsonResponse({ ok: false, error: "Missing OPENAI_API_KEY" }, { status: 500 });
+    return jsonResponse({ ok: false, error: "CHAT_NOT_CONFIGURED" }, { status: 500 });
   }
 
   let body: z.infer<typeof BodySchema>;
@@ -93,9 +92,9 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     );
   }
 
-  const researchMode = body.researchMode ?? false;
-
-  const systemPrompt = buildSystemPrompt(body.message);
+  const systemPrompt =
+    buildSystemPrompt(body.message) +
+    `\n\nContext (JSON):\n${JSON.stringify(body.context ?? null)}`;
 
   const inputMessages = [
     { role: "system", content: systemPrompt },
@@ -110,16 +109,22 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   const wantsStream = isEventStreamRequest(ctx.request);
 
+  // Invisible web usage: only enable when message looks time-sensitive or explicitly asks for sources.
+  const msg = body.message.toLowerCase();
+  const needWeb =
+    ["latest", "current", "today", "2025", "2026", "rate", "deadline", "updated"].some((k) => msg.includes(k)) ||
+    ["source", "sources", "cite", "citation", "link"].some((k) => msg.includes(k));
+
   if (wantsStream) {
     payload.stream = true;
-    if (researchMode) {
+    if (needWeb) {
       payload.tools = [{ type: "web_search" }];
       payload.include = ["web_search_call.action.sources"];
     }
   } else {
     // non-stream mode returns JSON directly
     payload.stream = false;
-    if (researchMode) {
+    if (needWeb) {
       payload.tools = [{ type: "web_search" }];
       payload.include = ["web_search_call.action.sources"];
     }

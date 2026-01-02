@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { streamChat } from "../lib/api";
+import { buildClientContext } from "../lib/context";
 
 type Msg = {
   id: string;
@@ -17,7 +18,6 @@ export function AskLennyDrawer({}: AskLennyDrawerProps) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [researchMode, setResearchMode] = useState(false);
 
   // No domain allowlisting UI; research mode uses internet + citations with no user filters.
 
@@ -81,7 +81,7 @@ export function AskLennyDrawer({}: AskLennyDrawerProps) {
         {
           message: text,
           history,
-          researchMode,
+          context: buildClientContext(),
         },
         {
           onDelta: (delta) => {
@@ -111,7 +111,7 @@ export function AskLennyDrawer({}: AskLennyDrawerProps) {
     } catch (err) {
       setIsStreaming(false);
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("Missing OPENAI_API_KEY")) {
+      if (msg.includes("CHAT_NOT_CONFIGURED")) {
         const hint = import.meta.env.DEV
           ? " Add OPENAI_API_KEY to Cloudflare Pages secrets or local .dev.vars."
           : "";
@@ -156,20 +156,11 @@ export function AskLennyDrawer({}: AskLennyDrawerProps) {
               </button>
             </div>
 
-            <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
-              <label className="row" style={{ fontSize: 13 }}>
-                <input
-                  type="checkbox"
-                  checked={researchMode}
-                  onChange={(e) => setResearchMode(e.target.checked)}
-                  disabled={isStreaming}
-                />
-                Research (uses internet + citations)
-              </label>
-              {error ? (
-                <div style={{ marginTop: 10, fontSize: 12, color: "crimson" }}>{error}</div>
-              ) : null}
-            </div>
+            {error ? (
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
+                <div style={{ fontSize: 12, color: "crimson" }}>{error}</div>
+              </div>
+            ) : null}
 
             <div className="sheetBody" style={{ flex: 1 }}>
               {messages.length === 0 ? (

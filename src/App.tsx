@@ -33,6 +33,14 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("lenny.page", view);
+    } catch {
+      // ignore
+    }
+  }, [view]);
+
   return (
     <>
       <AppShell>

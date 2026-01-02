@@ -13,6 +13,8 @@ import { ChoiceCards } from "./ChoiceCards";
 import { Segmented } from "./Segmented";
 import { LennyAvatar } from "./LennyAvatar";
 import { BottomSheet } from "./BottomSheet";
+import { postJSON } from "../lib/api";
+import { buildClientContext } from "../lib/context";
 
 type WizardProps = {
   questions: Question[];
@@ -41,6 +43,11 @@ export function Wizard({ questions, onComplete }: WizardProps) {
   const [suggestRationale, setSuggestRationale] = useState<string | null>(null);
   const [rationaleSource, setRationaleSource] = useState<null | "suggest">(null);
   const [idkMicro, setIdkMicro] = useState<Record<string, FoundationAnswerValue | undefined>>({});
+  const [aiExplain, setAiExplain] = useState<{ loading: boolean; text: string | null; error: string | null }>({
+    loading: false,
+    text: null,
+    error: null,
+  });
 
   useEffect(() => {
     // hydrate in case localStorage updated elsewhere
@@ -100,6 +107,7 @@ export function Wizard({ questions, onComplete }: WizardProps) {
     setSuggestRationale(null);
     setRationaleSource(null);
     setIdkMicro({});
+    setAiExplain({ loading: false, text: null, error: null });
   }, [currentQuestion?.id]);
 
   function chooseWithRationale(
@@ -313,6 +321,37 @@ export function Wizard({ questions, onComplete }: WizardProps) {
     );
   }
 
+  async function runExplain(q: Question) {
+    setAiExplain({ loading: true, text: null, error: null });
+    try {
+      const r = await postJSON<{ ok: true; text: string }>("/api/ai/explain", {
+        topic: `${q.title}\n\nWhy it matters:\n${q.whyItMatters}`,
+        context: buildClientContext(),
+      });
+      setAiExplain({ loading: false, text: r.text, error: null });
+    } catch (err) {
+      setAiExplain({
+        loading: false,
+        text: null,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  async function runSuggest(q: Question) {
+    const fallback = suggestFor(q, answers);
+    try {
+      const r = await postJSON<{ ok: true; value: FoundationAnswerValue; reason: string }>("/api/ai/suggest", {
+        questionId: q.id,
+        choices: q.choices,
+        context: buildClientContext(),
+      });
+      chooseWithRationale(q.id, r.value, r.reason, "suggest");
+    } catch {
+      chooseWithRationale(q.id, fallback.value, fallback.rationale, "suggest");
+    }
+  }
+
   return (
     <div className="wizardPage">
       <div className="wizardTop">
@@ -436,14 +475,19 @@ export function Wizard({ questions, onComplete }: WizardProps) {
                   <button className="pill" onClick={() => setHelpMode("idk")}>
                     I don’t know
                   </button>
-                  <button className="pill" onClick={() => setHelpMode("explain")}>
+                  <button
+                    className="pill"
+                    onClick={() => {
+                      setHelpMode("explain");
+                      runExplain(currentQuestion);
+                    }}
+                  >
                     Explain
                   </button>
                   <button
                     className="pill"
                     onClick={() => {
-                      const rec = suggestFor(currentQuestion, answers);
-                      chooseWithRationale(currentQuestion.id, rec.value, rec.rationale, "suggest");
+                      runSuggest(currentQuestion);
                     }}
                   >
                     Suggest
@@ -479,7 +523,15 @@ export function Wizard({ questions, onComplete }: WizardProps) {
             open={helpMode === "explain"}
             onClose={() => setHelpMode(null)}
           >
-            {renderExplain(currentQuestion)}
+            {aiExplain.loading ? (
+              <div style={{ color: "var(--muted)" }}>Thinking…</div>
+            ) : aiExplain.text ? (
+              <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{aiExplain.text}</div>
+            ) : aiExplain.error ? (
+              <div style={{ color: "crimson" }}>Couldn’t load that explanation.</div>
+            ) : (
+              renderExplain(currentQuestion)
+            )}
           </BottomSheet>
 
           <BottomSheet
