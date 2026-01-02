@@ -1,0 +1,392 @@
+:root {
+  --bg: #f6f7f8;
+  --card: #ffffff;
+  --text: #111111;
+  --muted: rgba(17, 17, 17, 0.7);
+  --border: rgba(0, 0, 0, 0.12);
+
+  --radius-lg: 16px;
+  --radius-md: 12px;
+
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+
+  --tap: 44px;
+  --shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* Base */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Container / layout */
+.container {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: var(--s4);
+}
+
+.max-w {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.stack {
+  display: grid;
+  gap: var(--s4);
+}
+
+.row {
+  display: flex;
+  gap: var(--s3);
+  align-items: center;
+}
+
+.row-wrap {
+  display: flex;
+  gap: var(--s3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.center {
+  display: grid;
+  place-items: center;
+}
+
+/* Card */
+.card {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+}
+
+.card-pad {
+  padding: var(--s4);
+}
+
+/* Buttons */
+.btn {
+  min-height: var(--tap);
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #111;
+  color: #fff;
+}
+
+.btn-secondary {
+  background: #f0f2f4;
+  color: var(--text);
+}
+
+.btn-ghost {
+  background: transparent;
+}
+
+.pill {
+  min-height: var(--tap);
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-weight: 600;
+}
+
+.pill-row {
+  display: flex;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+
+/* Focus */
+:focus-visible {
+  outline: 3px solid rgba(100, 108, 255, 0.55);
+  outline-offset: 2px;
+}
+
+/* Top bar */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(246, 247, 248, 0.75);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  min-height: 56px;
+  padding: var(--s3) var(--s4);
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.topbar-title {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.topbar-title h1 {
+  font-size: 16px;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.topbar-title div {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Choice cards */
+.choiceGrid {
+  display: grid;
+  gap: var(--s3);
+  grid-template-columns: 1fr;
+}
+
+.choiceCard {
+  min-height: 56px;
+  width: 100%;
+  text-align: left;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: #fff;
+  padding: var(--s4);
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: var(--s3);
+  align-items: center;
+}
+
+.choiceCard--selected {
+  border: 2px solid #111;
+  background: rgba(17, 17, 17, 0.05);
+}
+
+.choiceLabel {
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.choiceHelper {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: var(--s5);
+  }
+  .choiceGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Wizard */
+.wizardPage {
+  min-height: calc(100vh - 56px);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.wizardTop {
+  padding: var(--s4);
+}
+
+.wizardProgressRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s3);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.progressBar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-top: var(--s2);
+}
+
+.progressBar > div {
+  height: 100%;
+  background: #111;
+}
+
+.wizardMain {
+  padding: 0 var(--s4) var(--s6);
+}
+
+.wizardLayout {
+  display: grid;
+  gap: var(--s4);
+}
+
+.wizardLenny {
+  display: grid;
+  justify-items: center;
+  gap: var(--s2);
+}
+
+.wizardContent h2 {
+  margin: 0 0 var(--s3);
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.wizardActions {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  background: rgba(246, 247, 248, 0.9);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  padding: var(--s3) var(--s4);
+  padding-bottom: calc(var(--s3) + env(safe-area-inset-bottom));
+}
+
+.wizardActionsInner {
+  max-width: 920px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+
+@media (min-width: 768px) {
+  .wizardMain {
+    padding: 0 var(--s5) var(--s6);
+  }
+  .wizardLayout {
+    grid-template-columns: 280px 1fr;
+    align-items: start;
+  }
+  .wizardContent h2 {
+    font-size: 26px;
+  }
+}
+
+/* Bottom sheet / modal */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 70;
+}
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 80;
+  max-height: 85vh;
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  box-shadow: var(--shadow);
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.sheetHeader {
+  padding: var(--s4);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s3);
+}
+
+.sheetBody {
+  padding: var(--s4);
+  overflow: auto;
+}
+
+@media (min-width: 768px) {
+  .sheet {
+    top: 10vh;
+    bottom: auto;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(720px, 92vw);
+    max-height: 80vh;
+    border-radius: var(--radius-lg);
+  }
+}
+
+/* Ask Lenny drawer (desktop right drawer) */
+.askPanel {
+  /* mobile defaults: uses .sheet layout */
+}
+
+@media (min-width: 768px) {
+  .askPanel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: auto;
+    bottom: auto;
+    transform: none;
+    height: 100%;
+    width: min(420px, 92vw);
+    max-height: none;
+    border-radius: 0;
+    border-left: 1px solid var(--border);
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.18);
+  }
+}
+
+.floatingCta {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+}
+
+

@@ -125,19 +125,9 @@ export function AskLennyDrawer({}: AskLennyDrawerProps) {
   return (
     <>
       <button
+        id="ask-lenny-open"
         onClick={() => setOpen(true)}
-        style={{
-          position: "fixed",
-          right: 16,
-          bottom: 16,
-          padding: "10px 14px",
-          borderRadius: 999,
-          border: "1px solid rgba(0,0,0,0.12)",
-          background: "#111",
-          color: "#fff",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.18)",
-          zIndex: 50,
-        }}
+        className="btn btn-primary floatingCta"
       >
         Ask Lenny
       </button>
@@ -152,59 +142,22 @@ export function AskLennyDrawer({}: AskLennyDrawerProps) {
             zIndex: 60,
           }}
         >
-          <div
-            onClick={() => setOpen(false)}
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "rgba(0,0,0,0.35)",
-            }}
-          />
+          <div className="overlay" onClick={() => setOpen(false)} />
 
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              right: 0,
-              height: "100%",
-              width: "min(420px, 92vw)",
-              background: "#fff",
-              color: "#111",
-              borderLeft: "1px solid rgba(0,0,0,0.12)",
-              boxShadow: "-10px 0 30px rgba(0,0,0,0.18)",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <div
-              style={{
-                padding: 16,
-                borderBottom: "1px solid rgba(0,0,0,0.08)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-              }}
-            >
+          {/* Mobile: bottom sheet. Desktop: right drawer via CSS */}
+          <div className="sheet askPanel">
+            <div className="sheetHeader">
               <div>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>Ask Lenny</div>
-                <div style={{ fontSize: 12, opacity: 0.75 }}>Ask a question. I’ll keep it practical.</div>
+                <div style={{ fontWeight: 900 }}>Ask Lenny</div>
+                <div style={{ fontSize: 12, color: "var(--muted)" }}>Ask a question. I’ll keep it practical.</div>
               </div>
-              <button
-                onClick={() => setOpen(false)}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: 8,
-                  border: "1px solid rgba(0,0,0,0.12)",
-                  background: "#f6f7f8",
-                }}
-              >
+              <button className="btn btn-secondary" onClick={() => setOpen(false)}>
                 Close
               </button>
             </div>
 
             <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
-              <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
+              <label className="row" style={{ fontSize: 13 }}>
                 <input
                   type="checkbox"
                   checked={researchMode}
@@ -218,7 +171,7 @@ export function AskLennyDrawer({}: AskLennyDrawerProps) {
               ) : null}
             </div>
 
-            <div style={{ padding: 16, overflow: "auto", flex: 1 }}>
+            <div className="sheetBody" style={{ flex: 1 }}>
               {messages.length === 0 ? (
                 <div style={{ fontSize: 13, opacity: 0.75 }}>
                   Ask anything. I’ll stream the response as it arrives.
@@ -299,26 +252,14 @@ export function AskLennyDrawer({}: AskLennyDrawerProps) {
                     setDraft("");
                   }}
                   disabled={isStreaming}
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.12)",
-                    background: "#f6f7f8",
-                  }}
+                  className="btn btn-secondary"
                 >
                   Clear
                 </button>
                 <button
                   onClick={send}
                   disabled={draft.trim().length === 0 || isStreaming}
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: 10,
-                    border: "1px solid rgba(0,0,0,0.12)",
-                    background: "#111",
-                    color: "#fff",
-                    opacity: draft.trim().length === 0 || isStreaming ? 0.5 : 1,
-                  }}
+                  className="btn btn-primary"
                 >
                   {isStreaming ? "Sending…" : "Send"}
                 </button>

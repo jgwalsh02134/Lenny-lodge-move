@@ -25,6 +25,7 @@ export function Segmented({ choices, selected, onSelect }: SegmentedProps) {
             key={String(c.value)}
             onClick={() => onSelect(c.value)}
             style={{
+              minHeight: 44,
               borderRadius: 0,
               border: "none",
               borderLeft: idx === 0 ? "none" : "1px solid rgba(0,0,0,0.10)",

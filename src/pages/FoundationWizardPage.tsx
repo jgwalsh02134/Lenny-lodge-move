@@ -25,15 +25,13 @@ export function FoundationWizardPage({ onGoHome }: FoundationWizardPageProps) {
   }
 
   return (
-    <div style={{ maxWidth: 880, margin: "0 auto", padding: 16 }}>
-      <Wizard
-        questions={QUESTIONS}
-        onComplete={() => {
-          setFoundationStatus("complete");
-          setCompleted(true);
-        }}
-      />
-    </div>
+    <Wizard
+      questions={QUESTIONS}
+      onComplete={() => {
+        setFoundationStatus("complete");
+        setCompleted(true);
+      }}
+    />
   );
 }
 

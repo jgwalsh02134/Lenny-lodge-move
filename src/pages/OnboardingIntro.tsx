@@ -9,20 +9,11 @@ export function OnboardingIntro({ onBegin, onSkip }: OnboardingIntroProps) {
   const dryLine = "I’ll keep this organized. You keep your calendar mostly intact.";
 
   return (
-    <div style={{ maxWidth: 880, margin: "0 auto", padding: 16 }}>
-      <div style={{ display: "grid", gap: 14, justifyItems: "center" }}>
-        <LennyAvatar size={260} />
+    <div className="container">
+      <div className="stack" style={{ justifyItems: "center" }}>
+        <LennyAvatar size={280} />
 
-        <div
-          style={{
-            width: "100%",
-            borderRadius: 18,
-            border: "1px solid rgba(0,0,0,0.10)",
-            background: "rgba(255,255,255,0.92)",
-            padding: 18,
-            textAlign: "left",
-          }}
-        >
+        <div className="card card-pad" style={{ width: "100%" }}>
           <div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1.15, marginBottom: 8 }}>
             Hi — I’m Lenny Lodge.
           </div>
@@ -39,30 +30,11 @@ export function OnboardingIntro({ onBegin, onSkip }: OnboardingIntroProps) {
           </p>
           <p style={{ marginTop: 0, lineHeight: 1.5, opacity: 0.9 }}>{dryLine}</p>
 
-          <div style={{ display: "flex", gap: 10, marginTop: 14, alignItems: "center" }}>
-            <button
-              onClick={onBegin}
-              style={{
-                padding: "12px 14px",
-                borderRadius: 14,
-                border: "1px solid rgba(0,0,0,0.12)",
-                background: "#111",
-                color: "#fff",
-              }}
-            >
+          <div className="row-wrap" style={{ marginTop: "var(--s4)" }}>
+            <button className="btn btn-primary" onClick={onBegin} style={{ width: "100%", maxWidth: 360 }}>
               Let’s Begin
             </button>
-            <button
-              onClick={onSkip}
-              style={{
-                padding: "8px 10px",
-                borderRadius: 12,
-                border: "1px solid rgba(0,0,0,0.10)",
-                background: "transparent",
-                fontSize: 13,
-                opacity: 0.8,
-              }}
-            >
+            <button className="btn btn-ghost" onClick={onSkip} style={{ width: "100%", maxWidth: 360 }}>
               Skip intro
             </button>
           </div>

@@ -1,63 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
-import { postJSON } from "./lib/api";
 import { AskLennyDrawer } from "./components/AskLennyDrawer";
 import { AppShell } from "./components/AppShell";
 import { OnboardingIntro } from "./pages/OnboardingIntro";
 import { FoundationWizardPage } from "./pages/FoundationWizardPage";
 import { getFoundationStatus } from "./lib/foundationStore";
-
-type ResearchResponse = {
-  ok: true;
-  text: string;
-  citations: Array<{ url: string; title?: string }>;
-  sources: Array<{ url: string; title?: string }>;
-  raw: unknown;
-};
-
-type ImportResponse = {
-  ok: true;
-  url: string;
-  extracted: {
-    title?: string;
-    address?: string;
-    price?: string | number;
-    beds?: number | null;
-    baths?: number | null;
-    sqft?: number | null;
-    image?: string | null;
-    source: "jsonld" | "opengraph" | "unknown";
-    missing: string[];
-  };
-  raw: unknown;
-};
+import { LennyAvatar } from "./components/LennyAvatar";
 
 type AppView = "intro" | "wizard" | "home";
 
 function App() {
-  const [tab, setTab] = useState<"research" | "import">("research");
-  const [showApiTester, setShowApiTester] = useState(false);
   const [, setWelcomed] = useState(false);
   const [view, setView] = useState<AppView>("home");
-
-  // Research state
-  const [researchQuery, setResearchQuery] = useState("");
-  const [researchLoading, setResearchLoading] = useState(false);
-  const [researchError, setResearchError] = useState<string | null>(null);
-  const [researchResult, setResearchResult] = useState<ResearchResponse | null>(null);
-
-  const allowedDomains = useMemo(() => undefined, []);
-
-  // Import state
-  const [importUrl, setImportUrl] = useState("");
-  const [importLoading, setImportLoading] = useState(false);
-  const [importError, setImportError] = useState<string | null>(null);
-  const [importResult, setImportResult] = useState<ImportResponse | null>(null);
-
-  const showDevTools =
-    import.meta.env.DEV ||
-    (typeof window !== "undefined" &&
-      new URLSearchParams(window.location.search).get("dev") === "1");
 
   useEffect(() => {
     try {
@@ -78,37 +32,6 @@ function App() {
       setView(getFoundationStatus() === "complete" ? "home" : "wizard");
     }
   }, []);
-
-  async function runResearch() {
-    setResearchLoading(true);
-    setResearchError(null);
-    setResearchResult(null);
-    try {
-      const data = await postJSON<ResearchResponse>("/api/ai/research", {
-        query: researchQuery,
-        allowedDomains,
-      });
-      setResearchResult(data);
-    } catch (err) {
-      setResearchError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setResearchLoading(false);
-    }
-  }
-
-  async function runImport() {
-    setImportLoading(true);
-    setImportError(null);
-    setImportResult(null);
-    try {
-      const data = await postJSON<ImportResponse>("/api/listings/import", { url: importUrl });
-      setImportResult(data);
-    } catch (err) {
-      setImportError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setImportLoading(false);
-    }
-  }
 
   return (
     <>
@@ -141,252 +64,38 @@ function App() {
             }}
           />
         ) : (
-          <div>
-            <div
-              style={{
-                borderRadius: 16,
-                border: "1px solid rgba(0,0,0,0.10)",
-                background: "rgba(255,255,255,0.90)",
-                padding: 16,
-                textAlign: "left",
-              }}
-            >
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <button
-                  onClick={() => setView("wizard")}
-                  style={{
-                    padding: "14px 16px",
-                    borderRadius: 14,
-                    border: "1px solid rgba(0,0,0,0.12)",
-                    background: "#111",
-                    color: "#fff",
-                  }}
-                >
-                  Start Foundation
+          <div className="container">
+            <div className="stack" style={{ alignItems: "stretch" }}>
+              <div className="center" style={{ marginTop: "var(--s2)" }}>
+                <LennyAvatar size={260} />
+              </div>
+
+              <div className="card card-pad">
+                <div style={{ fontWeight: 950, fontSize: 20, lineHeight: 1.2, marginBottom: "var(--s2)" }}>
+                  Let’s map the cleanest path from White Plains to the Capital District.
+                </div>
+                <div style={{ color: "var(--muted)", lineHeight: 1.5 }}>
+                  We’ll keep this select-only and practical.
+                </div>
+              </div>
+
+              <div className="stack" style={{ gap: "var(--s3)" }}>
+                <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => setView("wizard")}>
+                  Continue / Start Foundation
                 </button>
                 <button
-                  onClick={() => {
-                    setTab("import");
-                    if (!showDevTools) {
-                      alert("Coming soon: listings will be connected to the import flow.");
-                      return;
-                    }
-                    setShowApiTester(true);
-                  }}
-                  style={{
-                    padding: "14px 16px",
-                    borderRadius: 14,
-                    border: "1px solid rgba(0,0,0,0.12)",
-                    background: "#f6f7f8",
-                  }}
+                  className="btn btn-secondary"
+                  style={{ width: "100%" }}
+                  onClick={() => alert("Browse Listings is coming next. For now, run Foundation to set the plan.")}
                 >
                   Browse Listings
                 </button>
               </div>
 
-              <p style={{ marginTop: 12, marginBottom: 6, lineHeight: 1.5 }}>
-                I’ll ask a few strategy questions first — they determine the cleanest path.
-              </p>
-              <div style={{ fontSize: 12, opacity: 0.75 }}>
-                Educational guidance only — for NY legal/tax questions, consult a NY attorney/CPA.
+              <div style={{ fontSize: 12, color: "var(--muted)", textAlign: "center" }}>
+                Tap-friendly. Thumb-reachable. No typing required.
               </div>
             </div>
-
-            {showDevTools ? (
-              <div style={{ marginTop: 14 }}>
-                <button
-                  onClick={() => setShowApiTester((v) => !v)}
-                  style={{
-                    padding: "10px 12px",
-                    borderRadius: 12,
-                    border: "1px solid rgba(0,0,0,0.10)",
-                    background: "transparent",
-                  }}
-                >
-                  {showApiTester ? "Hide" : "Show"} Developer Tools
-                </button>
-              </div>
-            ) : null}
-
-            {showDevTools && showApiTester ? (
-              <div
-                style={{
-                  marginTop: 12,
-                  borderRadius: 16,
-                  border: "1px solid rgba(0,0,0,0.10)",
-                  background: "rgba(255,255,255,0.90)",
-                  padding: 16,
-                  textAlign: "left",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                  <h2 style={{ marginTop: 0, marginBottom: 6, fontSize: 18 }}>Developer Tools</h2>
-                </div>
-
-                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                  <button
-                    onClick={() => setTab("research")}
-                    disabled={tab === "research"}
-                    style={{ padding: "8px 12px" }}
-                  >
-                    Research
-                  </button>
-                  <button
-                    onClick={() => setTab("import")}
-                    disabled={tab === "import"}
-                    style={{ padding: "8px 12px" }}
-                  >
-                    Import Listing
-                  </button>
-                </div>
-
-                {tab === "research" ? (
-                  <div>
-                    <h3 style={{ marginTop: 0 }}>Research</h3>
-                    <label style={{ display: "block", marginBottom: 8 }}>
-                      Query
-                      <textarea
-                        value={researchQuery}
-                        onChange={(e) => setResearchQuery(e.target.value)}
-                        rows={6}
-                        style={{ width: "100%", marginTop: 6 }}
-                        placeholder="What is the typical NY home closing timeline?"
-                      />
-                    </label>
-
-                    <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-                      <button
-                        onClick={runResearch}
-                        disabled={researchLoading || researchQuery.trim().length === 0}
-                      >
-                        {researchLoading ? "Running…" : "Run research"}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setResearchQuery("");
-                          setResearchResult(null);
-                          setResearchError(null);
-                        }}
-                        disabled={researchLoading}
-                      >
-                        Clear
-                      </button>
-                    </div>
-
-                    {researchError ? (
-                      <p style={{ color: "crimson", marginTop: 12 }}>{researchError}</p>
-                    ) : null}
-
-                    {researchResult ? (
-                      <div style={{ marginTop: 16 }}>
-                        <h4>Answer</h4>
-                        <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-                          {researchResult.text || "(no text returned)"}
-                        </div>
-
-                        <h4 style={{ marginTop: 16 }}>Citations</h4>
-                        {researchResult.citations?.length ? (
-                          <ul>
-                            {researchResult.citations.map((c) => (
-                              <li key={c.url}>
-                                <a href={c.url} target="_blank" rel="noreferrer">
-                                  {c.title ?? c.url}
-                                </a>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p>(none)</p>
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div>
-                    <h3 style={{ marginTop: 0 }}>Import Listing</h3>
-                    <label style={{ display: "block", marginBottom: 8 }}>
-                      Listing URL
-                      <input
-                        value={importUrl}
-                        onChange={(e) => setImportUrl(e.target.value)}
-                        style={{ width: "100%", marginTop: 6 }}
-                        placeholder="https://..."
-                      />
-                    </label>
-
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button
-                        onClick={runImport}
-                        disabled={importLoading || importUrl.trim().length === 0}
-                      >
-                        {importLoading ? "Importing…" : "Import"}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setImportUrl("");
-                          setImportResult(null);
-                          setImportError(null);
-                        }}
-                        disabled={importLoading}
-                      >
-                        Clear
-                      </button>
-                    </div>
-
-                    {importError ? (
-                      <p style={{ color: "crimson", marginTop: 12 }}>{importError}</p>
-                    ) : null}
-
-                    {importResult ? (
-                      <div style={{ marginTop: 16 }}>
-                        <h4>Extracted</h4>
-                        <dl style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 8 }}>
-                          <dt>source</dt>
-                          <dd>{importResult.extracted.source}</dd>
-                          <dt>title</dt>
-                          <dd>{importResult.extracted.title ?? "(missing)"}</dd>
-                          <dt>address</dt>
-                          <dd>{importResult.extracted.address ?? "(missing)"}</dd>
-                          <dt>price</dt>
-                          <dd>{importResult.extracted.price ?? "(missing)"}</dd>
-                          <dt>beds</dt>
-                          <dd>{String(importResult.extracted.beds ?? "(missing)")}</dd>
-                          <dt>baths</dt>
-                          <dd>{String(importResult.extracted.baths ?? "(missing)")}</dd>
-                          <dt>sqft</dt>
-                          <dd>{String(importResult.extracted.sqft ?? "(missing)")}</dd>
-                          <dt>image</dt>
-                          <dd>
-                            {importResult.extracted.image ? (
-                              <a
-                                href={importResult.extracted.image}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                {importResult.extracted.image}
-                              </a>
-                            ) : (
-                              "(missing)"
-                            )}
-                          </dd>
-                        </dl>
-
-                        <h4 style={{ marginTop: 16 }}>Missing</h4>
-                        {importResult.extracted.missing?.length ? (
-                          <ul>
-                            {importResult.extracted.missing.map((m) => (
-                              <li key={m}>{m}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p>(none)</p>
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
-                )}
-              </div>
-            ) : null}
           </div>
         )}
       </AppShell>

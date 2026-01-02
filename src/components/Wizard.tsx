@@ -12,7 +12,7 @@ import {
 import { ChoiceCards } from "./ChoiceCards";
 import { Segmented } from "./Segmented";
 import { LennyAvatar } from "./LennyAvatar";
-import { QuestionHelpPanel } from "./QuestionHelpPanel";
+import { BottomSheet } from "./BottomSheet";
 
 type WizardProps = {
   questions: Question[];
@@ -39,6 +39,7 @@ export function Wizard({ questions, onComplete }: WizardProps) {
   const [stepIndex, setStepIndex] = useState(() => getFoundationStepIndex());
   const [helpMode, setHelpMode] = useState<null | "explain" | "idk" | "suggest">(null);
   const [suggestRationale, setSuggestRationale] = useState<string | null>(null);
+  const [rationaleSource, setRationaleSource] = useState<null | "suggest">(null);
   const [idkMicro, setIdkMicro] = useState<Record<string, FoundationAnswerValue | undefined>>({});
 
   useEffect(() => {
@@ -97,12 +98,25 @@ export function Wizard({ questions, onComplete }: WizardProps) {
     // reset helper UI when changing main question
     setHelpMode(null);
     setSuggestRationale(null);
+    setRationaleSource(null);
     setIdkMicro({});
   }, [currentQuestion?.id]);
 
-  function chooseWithRationale(id: keyof FoundationAnswers, value: FoundationAnswerValue, rationale: string) {
+  function chooseWithRationale(
+    id: keyof FoundationAnswers,
+    value: FoundationAnswerValue,
+    rationale: string,
+    source: "suggest" | "idk",
+  ) {
     pickAnswer(id, value);
-    setSuggestRationale(rationale);
+    // Only show rationale when user asked for a suggestion (not when using IDK helper).
+    if (source === "suggest") {
+      setSuggestRationale(rationale);
+      setRationaleSource("suggest");
+    } else {
+      setSuggestRationale(null);
+      setRationaleSource(null);
+    }
   }
 
   function suggestFor(q: Question, a: FoundationAnswers): { value: FoundationAnswerValue; rationale: string } {
@@ -198,22 +212,16 @@ export function Wizard({ questions, onComplete }: WizardProps) {
           <div style={{ opacity: 0.85 }}>
             No problem. For now, I’ll pick a safe default so we can keep moving.
           </div>
-          <div style={{ padding: 12, borderRadius: 14, border: "1px solid rgba(0,0,0,0.10)", background: "#f6f7f8" }}>
+          <div className="card card-pad">
             <div style={{ fontWeight: 800, marginBottom: 6 }}>Recommended</div>
             <div style={{ marginBottom: 6 }}>{String(rec.value)}</div>
             <div style={{ fontSize: 13, opacity: 0.8 }}>{rec.rationale}</div>
           </div>
           <button
+            className="btn btn-primary"
             onClick={() => {
-              chooseWithRationale(q.id, rec.value, rec.rationale);
+              chooseWithRationale(q.id, rec.value, rec.rationale, "idk");
               setHelpMode(null);
-            }}
-            style={{
-              padding: "12px 14px",
-              borderRadius: 14,
-              border: "1px solid rgba(0,0,0,0.12)",
-              background: "#111",
-              color: "#fff",
             }}
           >
             Choose recommended
@@ -283,7 +291,7 @@ export function Wizard({ questions, onComplete }: WizardProps) {
         </div>
 
         {rec ? (
-          <div style={{ padding: 12, borderRadius: 14, border: "1px solid rgba(0,0,0,0.10)", background: "#f6f7f8" }}>
+          <div className="card card-pad">
             <div style={{ fontWeight: 800, marginBottom: 6 }}>Recommended</div>
             <div style={{ marginBottom: 6 }}>{String(rec.value)}</div>
             <div style={{ fontSize: 13, opacity: 0.8 }}>{rec.rationale}</div>
@@ -293,18 +301,11 @@ export function Wizard({ questions, onComplete }: WizardProps) {
         <button
           onClick={() => {
             if (!rec) return;
-            chooseWithRationale(q.id, rec.value, rec.rationale);
+            chooseWithRationale(q.id, rec.value, rec.rationale, "idk");
             setHelpMode(null);
           }}
           disabled={!rec}
-          style={{
-            padding: "12px 14px",
-            borderRadius: 14,
-            border: "1px solid rgba(0,0,0,0.12)",
-            background: "#111",
-            color: "#fff",
-            opacity: rec ? 1 : 0.5,
-          }}
+          className="btn btn-primary"
         >
           Choose recommended
         </button>
@@ -313,39 +314,20 @@ export function Wizard({ questions, onComplete }: WizardProps) {
   }
 
   return (
-    <div
-      style={{
-        borderRadius: 16,
-        border: "1px solid rgba(0,0,0,0.10)",
-        background: "rgba(255,255,255,0.90)",
-        padding: 16,
-      }}
-    >
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>{progressText}</div>
-        <div
-          style={{
-            height: 8,
-            borderRadius: 999,
-            background: "rgba(0,0,0,0.08)",
-            overflow: "hidden",
-          }}
-        >
-          <div style={{ width: `${progressPct}%`, height: "100%", background: "#111" }} />
+    <div className="wizardPage">
+      <div className="wizardTop">
+        <div className="wizardProgressRow">
+          <div>{progressText}</div>
+          <div style={{ color: "var(--muted)" }}>Select-only</div>
+        </div>
+        <div className="progressBar">
+          <div style={{ width: `${progressPct}%` }} />
         </div>
       </div>
 
-      <style>
-        {`
-          @media (max-width: 760px) {
-            .wizardLayout { grid-template-columns: 1fr !important; }
-            .wizardLenny { position: static !important; }
-          }
-        `}
-      </style>
-
       {step?.type === "sequenceExplainer" ? (
-        <div>
+        <div className="wizardMain">
+          <div className="card card-pad">
           <h2 style={{ marginTop: 0, marginBottom: 6 }}>Quick explainer: choosing a sequence</h2>
           <p style={{ marginTop: 0, opacity: 0.8 }}>
             Three common paths. None is “right” — the right one is the one your constraints can actually support.
@@ -404,177 +386,109 @@ export function Wizard({ questions, onComplete }: WizardProps) {
                     // Move forward to the next step after explainer (which will disappear once value is set)
                     goNext();
                   }}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 12,
-                    border: "1px solid rgba(0,0,0,0.12)",
-                    background: "#111",
-                    color: "#fff",
-                  }}
+                  className="btn btn-primary"
                 >
                   Choose this
                 </button>
               </div>
             ))}
           </div>
-
-          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-            <button
-              onClick={goBack}
-              style={{
-                padding: "10px 12px",
-                borderRadius: 12,
-                border: "1px solid rgba(0,0,0,0.12)",
-                background: "#f6f7f8",
-              }}
-            >
-              Back
-            </button>
           </div>
         </div>
       ) : currentQuestion ? (
-        <div
-          className="wizardLayout"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "220px 1fr",
-            gap: 14,
-            alignItems: "start",
-          }}
-        >
-          <div
-            className="wizardLenny"
-            style={{
-              display: "grid",
-              justifyItems: "center",
-              gap: 10,
-              position: "sticky",
-              top: 16,
-            }}
-          >
-            <LennyAvatar size={180} />
-            <div style={{ fontSize: 12, opacity: 0.75, textAlign: "center" }}>
-              I’ll keep this moving. You keep it select-only.
-            </div>
-          </div>
-
-          <div>
-            <h2 style={{ marginTop: 0, marginBottom: 10 }}>{currentQuestion.title}</h2>
-
-            {currentQuestion.ui === "cards" ? (
-              <ChoiceCards
-                choices={currentQuestion.choices}
-                selected={selectedValue}
-                onSelect={(v) => pickAnswer(currentQuestion.id, v)}
-              />
-            ) : (
-              <Segmented
-                choices={currentQuestion.choices}
-                selected={selectedValue}
-                onSelect={(v) => pickAnswer(currentQuestion.id, v)}
-              />
-            )}
-
-            {suggestRationale ? (
-              <div style={{ marginTop: 10, padding: 12, borderRadius: 14, background: "#f6f7f8", border: "1px solid rgba(0,0,0,0.10)" }}>
-                <div style={{ fontWeight: 800, marginBottom: 6 }}>Lenny suggests this because…</div>
-                <div style={{ fontSize: 13, opacity: 0.85, lineHeight: 1.5 }}>{suggestRationale}</div>
+        <>
+          <div className="wizardMain">
+            <div className="wizardLayout">
+              <div className="wizardLenny">
+                <LennyAvatar size={220} />
+                <div style={{ fontSize: 13, color: "var(--muted)", textAlign: "center" }}>
+                  Big taps. No typing. We keep moving.
+                </div>
               </div>
-            ) : null}
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+              <div className="wizardContent">
+                <h2>{currentQuestion.title}</h2>
+
+                {currentQuestion.ui === "cards" ? (
+                  <ChoiceCards
+                    choices={currentQuestion.choices}
+                    selected={selectedValue}
+                    onSelect={(v) => pickAnswer(currentQuestion.id, v)}
+                  />
+                ) : (
+                  <div className="card card-pad">
+                    <Segmented
+                      choices={currentQuestion.choices}
+                      selected={selectedValue}
+                      onSelect={(v) => pickAnswer(currentQuestion.id, v)}
+                    />
+                  </div>
+                )}
+
+                {rationaleSource === "suggest" && suggestRationale ? (
+                  <div className="card card-pad" style={{ marginTop: "var(--s3)" }}>
+                    <div style={{ fontWeight: 900, marginBottom: 6 }}>Suggested</div>
+                    <div style={{ color: "var(--muted)", lineHeight: 1.5 }}>{suggestRationale}</div>
+                  </div>
+                ) : null}
+
+                <div className="pill-row" style={{ marginTop: "var(--s4)" }}>
+                  <button className="pill" onClick={() => setHelpMode("idk")}>
+                    I don’t know
+                  </button>
+                  <button className="pill" onClick={() => setHelpMode("explain")}>
+                    Explain
+                  </button>
+                  <button
+                    className="pill"
+                    onClick={() => {
+                      const rec = suggestFor(currentQuestion, answers);
+                      chooseWithRationale(currentQuestion.id, rec.value, rec.rationale, "suggest");
+                    }}
+                  >
+                    Suggest
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="wizardActions">
+            <div className="wizardActionsInner">
               <button
-                onClick={() => setHelpMode("idk")}
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: 12,
-                  border: "1px solid rgba(0,0,0,0.12)",
-                  background: "#fff",
-                }}
+                className="btn btn-secondary"
+                onClick={goBack}
+                disabled={safeStepIndex === 0}
               >
-                I don’t know
+                Back
               </button>
-              <button
-                onClick={() => setHelpMode("explain")}
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: 12,
-                  border: "1px solid rgba(0,0,0,0.12)",
-                  background: "#fff",
-                }}
-              >
-                Explain this
-              </button>
-              <button
-                onClick={() => {
-                  const rec = suggestFor(currentQuestion, answers);
-                  chooseWithRationale(currentQuestion.id, rec.value, rec.rationale);
-                }}
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: 12,
-                  border: "1px solid rgba(0,0,0,0.12)",
-                  background: "#fff",
-                }}
-              >
-                What do you suggest?
+              <button className="btn btn-primary" onClick={goNext} disabled={!isSelected}>
+                Next
               </button>
             </div>
-
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginTop: 16 }}>
-            <button
-              onClick={goBack}
-              disabled={safeStepIndex === 0}
-              style={{
-                padding: "10px 12px",
-                borderRadius: 12,
-                border: "1px solid rgba(0,0,0,0.12)",
-                background: "#f6f7f8",
-                opacity: safeStepIndex === 0 ? 0.5 : 1,
-              }}
-            >
-              Back
-            </button>
-
-            <button
-              onClick={goNext}
-              disabled={!isSelected}
-              style={{
-                padding: "10px 12px",
-                borderRadius: 12,
-                border: "1px solid rgba(0,0,0,0.12)",
-                background: "#111",
-                color: "#fff",
-                opacity: !isSelected ? 0.5 : 1,
-              }}
-            >
-              Next
-            </button>
           </div>
-          </div>
-        </div>
+        </>
       ) : (
-        <div>Loading…</div>
+        <div className="wizardMain">Loading…</div>
       )}
 
       {currentQuestion ? (
         <>
-          <QuestionHelpPanel
-            title={helpMode === "explain" ? "Explain this" : helpMode === "idk" ? "Let’s figure it out" : "Help"}
+          <BottomSheet
+            title="Explain"
             open={helpMode === "explain"}
             onClose={() => setHelpMode(null)}
           >
             {renderExplain(currentQuestion)}
-          </QuestionHelpPanel>
+          </BottomSheet>
 
-          <QuestionHelpPanel
+          <BottomSheet
             title="I don’t know — quick helper"
             open={helpMode === "idk"}
             onClose={() => setHelpMode(null)}
           >
             {renderIdk(currentQuestion)}
-          </QuestionHelpPanel>
+          </BottomSheet>
         </>
       ) : null}
     </div>

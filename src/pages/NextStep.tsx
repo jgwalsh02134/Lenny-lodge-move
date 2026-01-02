@@ -29,16 +29,8 @@ export function NextStep({ answers, onGoHome }: NextStepProps) {
   if (financing === "Mortgage") personalized.push("Start pre-approval early so the timeline doesn’t surprise you.");
 
   return (
-    <div style={{ maxWidth: 880, margin: "0 auto", padding: 16 }}>
-      <div
-        style={{
-          borderRadius: 16,
-          border: "1px solid rgba(0,0,0,0.10)",
-          background: "rgba(255,255,255,0.90)",
-          padding: 18,
-          textAlign: "left",
-        }}
-      >
+    <div className="container">
+      <div className="card card-pad" style={{ textAlign: "left" }}>
         <h2 style={{ marginTop: 0 }}>Your provisional strategy</h2>
         <p style={{ marginTop: 0, opacity: 0.85, lineHeight: 1.5 }}>
           This is a first pass for 54 Collyer Pl → Capital District. It’s designed to reduce decision fatigue and keep
@@ -154,13 +146,7 @@ export function NextStep({ answers, onGoHome }: NextStepProps) {
         <div style={{ marginTop: 14 }}>
           <button
             onClick={onGoHome}
-            style={{
-              padding: "12px 14px",
-              borderRadius: 14,
-              border: "1px solid rgba(0,0,0,0.12)",
-              background: "#111",
-              color: "#fff",
-            }}
+            className="btn btn-primary"
           >
             Go to Home
           </button>
