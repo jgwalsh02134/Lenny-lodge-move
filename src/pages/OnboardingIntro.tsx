@@ -15,58 +15,62 @@ export function OnboardingIntro({ humorDial, onBegin, onSkip }: OnboardingIntroP
 
   return (
     <div style={{ maxWidth: 880, margin: "0 auto", padding: 16 }}>
-      <div
-        style={{
-          borderRadius: 16,
-          border: "1px solid rgba(0,0,0,0.10)",
-          background: "rgba(255,255,255,0.90)",
-          padding: 18,
-          textAlign: "left",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <LennyAvatar size={56} />
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 18, lineHeight: 1.1 }}>Hi — I’m Lenny Lodge.</div>
-            <div style={{ fontSize: 13, opacity: 0.75 }}>Host specialist • Move strategy</div>
+      <div style={{ display: "grid", gap: 14, justifyItems: "center" }}>
+        <LennyAvatar size={260} />
+
+        <div
+          style={{
+            width: "100%",
+            borderRadius: 18,
+            border: "1px solid rgba(0,0,0,0.10)",
+            background: "rgba(255,255,255,0.92)",
+            padding: 18,
+            textAlign: "left",
+          }}
+        >
+          <div style={{ fontWeight: 900, fontSize: 22, lineHeight: 1.15, marginBottom: 8 }}>
+            Hi — I’m Lenny Lodge.
           </div>
-        </div>
+          <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 12 }}>
+            Host specialist • Move strategy • White Plains → Capital District
+          </div>
 
-        <p style={{ marginTop: 0, lineHeight: 1.5 }}>
-          I help you pick a sane sequence (sell-first, buy-first, or a clean middle path), map the steps, and reduce
-          decision clutter.
-        </p>
-        <p style={{ marginTop: 0, lineHeight: 1.5 }}>
-          We’ll start with a few select-only questions. Your answers change the plan — and they change what “easy” means.
-        </p>
-        {dryLine ? <p style={{ marginTop: 0, lineHeight: 1.5, opacity: 0.9 }}>{dryLine}</p> : null}
+          <p style={{ marginTop: 0, lineHeight: 1.5 }}>
+            I help you choose a sequence (sell-first, buy-first, or a clean middle path), map the steps, and keep
+            optionality without drowning in it.
+          </p>
+          <p style={{ marginTop: 0, lineHeight: 1.5 }}>
+            We’ll start with a few select-only questions. Your answers change the plan — and they change what “easy” means.
+          </p>
+          {dryLine ? <p style={{ marginTop: 0, lineHeight: 1.5, opacity: 0.9 }}>{dryLine}</p> : null}
 
-        <div style={{ display: "flex", gap: 10, marginTop: 14, alignItems: "center" }}>
-          <button
-            onClick={onBegin}
-            style={{
-              padding: "12px 14px",
-              borderRadius: 14,
-              border: "1px solid rgba(0,0,0,0.12)",
-              background: "#111",
-              color: "#fff",
-            }}
-          >
-            Let’s Begin
-          </button>
-          <button
-            onClick={onSkip}
-            style={{
-              padding: "8px 10px",
-              borderRadius: 12,
-              border: "1px solid rgba(0,0,0,0.10)",
-              background: "transparent",
-              fontSize: 13,
-              opacity: 0.8,
-            }}
-          >
-            Skip intro
-          </button>
+          <div style={{ display: "flex", gap: 10, marginTop: 14, alignItems: "center" }}>
+            <button
+              onClick={onBegin}
+              style={{
+                padding: "12px 14px",
+                borderRadius: 14,
+                border: "1px solid rgba(0,0,0,0.12)",
+                background: "#111",
+                color: "#fff",
+              }}
+            >
+              Let’s Begin
+            </button>
+            <button
+              onClick={onSkip}
+              style={{
+                padding: "8px 10px",
+                borderRadius: 12,
+                border: "1px solid rgba(0,0,0,0.10)",
+                background: "transparent",
+                fontSize: 13,
+                opacity: 0.8,
+              }}
+            >
+              Skip intro
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -1,19 +1,14 @@
 import type { ReactNode } from "react";
-import type { HumorDial } from "../lib/lennySettings";
 import { LennyAvatar } from "./LennyAvatar";
 
 type AppShellProps = {
-  humorDial: HumorDial;
   seriousMode: boolean;
-  onHumorDialChange: (v: HumorDial) => void;
   onSeriousModeChange: (v: boolean) => void;
   children: ReactNode;
 };
 
 export function AppShell({
-  humorDial,
   seriousMode,
-  onHumorDialChange,
   onSeriousModeChange,
   children,
 }: AppShellProps) {
@@ -41,15 +36,6 @@ export function AppShell({
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
-            Humor Dial
-            <select value={humorDial} onChange={(e) => onHumorDialChange(e.target.value as HumorDial)}>
-              <option value="low">low</option>
-              <option value="medium">medium</option>
-              <option value="high">high</option>
-            </select>
-          </label>
-
           <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
             <input
               type="checkbox"

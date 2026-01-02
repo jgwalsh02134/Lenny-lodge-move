@@ -3,12 +3,13 @@ export type FoundationId =
   | "move_in_date_flex"
   | "sequence_preference"
   | "financing_approach"
-  | "risk_tolerance"
   | "temp_housing"
-  | "storage_need"
   | "carry_cost_tolerance"
+  | "showing_tolerance"
+  | "risk_posture"
   | "decision_pace"
-  | "energy_level";
+  | "energy_level"
+  | "hoa_preference";
 
 export type FoundationAnswerValue = string | number | boolean;
 export type FoundationAnswers = Record<FoundationId, FoundationAnswerValue>;

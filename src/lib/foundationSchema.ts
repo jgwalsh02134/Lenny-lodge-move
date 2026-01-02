@@ -18,9 +18,9 @@ export type Question = {
 export const QUESTIONS: Question[] = [
   {
     id: "start_timeframe",
-    title: "When are you starting this move plan?",
+    title: "When do you want to start making real progress on the White Plains → Capital District move?",
     whyItMatters:
-      "Timeframe determines how aggressive we can be with pricing, prep work, and lender/title timelines.",
+      "Timing drives everything: listing prep for 54 Collyer Pl, search pace up north, and how tight financing/closing windows need to be.",
     ui: "cards",
     choices: [
       { label: "Now (this month)", value: "Now (this month)" },
@@ -31,9 +31,9 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: "move_in_date_flex",
-    title: "How flexible is your move-in date?",
+    title: "How flexible is your target move-in timing (Capital District / North Colonie preferred, not required)?",
     whyItMatters:
-      "Flexibility is leverage. It changes which contingencies are safe and which timelines are realistic.",
+      "Flexibility is leverage. The more flexible you are, the more options you have for sequence, offers, and staging/repairs at 54 Collyer Pl.",
     ui: "segmented",
     choices: [
       { label: "Fixed date", value: "Fixed date" },
@@ -44,22 +44,22 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: "sequence_preference",
-    title: "Which sequence do you prefer?",
+    title: "Which sequence feels safest for you right now?",
     whyItMatters:
-      "Sell-first vs buy-first changes risk, financing options, and how much temporary housing/storage helps.",
+      "Sell-first vs buy-first changes risk, financing options, and how much the “safety valves” (temp housing, overlap time) matter.",
     ui: "cards",
     choices: [
       { label: "Sell first", value: "Sell first" },
       { label: "Buy first", value: "Buy first" },
       { label: "Try to do both (simultaneous)", value: "Try to do both (simultaneous)" },
-      { label: "Not sure yet", value: "Not sure yet", helper: "I’ll show a quick explainer next." },
+      { label: "Not sure", value: "Not sure", helper: "Totally normal — I’ll help you pick a default." },
     ],
   },
   {
     id: "financing_approach",
-    title: "How are you planning to finance?",
+    title: "What’s your financing path for the next home?",
     whyItMatters:
-      "Financing determines the order of operations, documentation needs, and how tight the schedule can be.",
+      "Financing drives what’s feasible: buy-first is very different with cash vs mortgage vs bridge options.",
     ui: "segmented",
     choices: [
       { label: "Cash", value: "Cash" },
@@ -69,48 +69,10 @@ export const QUESTIONS: Question[] = [
     ],
   },
   {
-    id: "risk_tolerance",
-    title: "How much risk can you tolerate?",
-    whyItMatters:
-      "Risk tolerance determines whether we optimize for certainty (clean close) or for the best outcome (with more moving parts).",
-    ui: "cards",
-    choices: [
-      { label: "Low (min surprises)", value: "Low (min surprises)" },
-      { label: "Medium", value: "Medium" },
-      { label: "High (optimize outcome even if bumpy)", value: "High (optimize outcome even if bumpy)" },
-    ],
-  },
-  {
-    id: "temp_housing",
-    title: "Are you open to temporary housing?",
-    whyItMatters:
-      "Temporary housing is a safety valve. It can turn a stressful ‘must-time-perfectly’ plan into a manageable one.",
-    ui: "segmented",
-    choices: [
-      { label: "No", value: "No" },
-      { label: "Prefer not", value: "Prefer not" },
-      { label: "If needed", value: "If needed" },
-      { label: "Fine with it", value: "Fine with it" },
-    ],
-  },
-  {
-    id: "storage_need",
-    title: "Do you need storage during the move?",
-    whyItMatters:
-      "Storage affects costs, logistics, and whether we can stage/prepare efficiently without living inside moving boxes.",
-    ui: "segmented",
-    choices: [
-      { label: "None", value: "None" },
-      { label: "A little", value: "A little" },
-      { label: "A lot", value: "A lot" },
-      { label: "Not sure", value: "Not sure" },
-    ],
-  },
-  {
     id: "carry_cost_tolerance",
-    title: "How many months of overlap can you tolerate (carry costs)?",
+    title: "How long could you tolerate carrying two places (overlap) if needed?",
     whyItMatters:
-      "Overlap (two mortgages/rents, utilities, insurance) is the biggest stress multiplier — we plan to keep it within your tolerance.",
+      "Overlap (two housing payments + utilities) is the biggest stress multiplier. This sets guardrails for the plan.",
     ui: "segmented",
     choices: [
       { label: "0 months", value: "0 months" },
@@ -120,27 +82,80 @@ export const QUESTIONS: Question[] = [
     ],
   },
   {
-    id: "decision_pace",
-    title: "How fast do you want decisions to move?",
+    id: "temp_housing",
+    title: "Are you open to temporary housing if the timing doesn’t line up cleanly?",
     whyItMatters:
-      "Pace determines how we structure search, tours, offers, and review time — without turning it into a second job.",
+      "Temporary housing can turn a fragile plan into a flexible one. It’s optional — but it’s powerful.",
+    ui: "segmented",
+    choices: [
+      { label: "No", value: "No" },
+      { label: "Prefer not", value: "Prefer not" },
+      { label: "If needed", value: "If needed" },
+      { label: "Fine with it", value: "Fine with it" },
+    ],
+  },
+  {
+    id: "showing_tolerance",
+    title: "How much disruption can you tolerate while selling 54 Collyer Pl (showings + prep)?",
+    whyItMatters:
+      "This changes whether we optimize for speed, privacy, or flexibility — and how aggressive we are about staging/repairs.",
+    ui: "cards",
+    choices: [
+      { label: "Minimal (keep it controlled)", value: "minimal" },
+      { label: "Moderate", value: "moderate" },
+      { label: "Flexible (I can roll with it)", value: "flexible" },
+      { label: "Not sure", value: "not_sure" },
+    ],
+  },
+  {
+    id: "risk_posture",
+    title: "Practical risk posture: what are we optimizing for?",
+    whyItMatters:
+      "This decides whether we bias toward certainty (fewer surprises) or toward the best outcome (more moving parts).",
+    ui: "cards",
+    choices: [
+      { label: "Minimize surprises", value: "minimize_surprises" },
+      { label: "Balanced", value: "balanced" },
+      { label: "Optimize outcome (even if bumpy)", value: "optimize_outcome" },
+      { label: "Not sure", value: "not_sure" },
+    ],
+  },
+  {
+    id: "decision_pace",
+    title: "Decision pace: how fast should this move when choices appear?",
+    whyItMatters:
+      "This sets the cadence for tours, offers, and review time — without turning your life into a spreadsheet.",
     ui: "cards",
     choices: [
       { label: "Fast", value: "Fast" },
       { label: "Steady", value: "Steady" },
       { label: "Slow & careful", value: "Slow & careful" },
+      { label: "Not sure", value: "Not sure" },
     ],
   },
   {
     id: "energy_level",
     title: "How’s your bandwidth for this process right now?",
     whyItMatters:
-      "This helps me pick a plan that’s sustainable. The best plan is the one you’ll actually follow.",
+      "This helps me pick a plan you’ll actually follow. Sustainable beats heroic.",
     ui: "segmented",
     choices: [
       { label: "Low", value: "Low" },
       { label: "Medium", value: "Medium" },
       { label: "High", value: "High" },
+    ],
+  },
+  {
+    id: "hoa_preference",
+    title: "HOA preference (for the next place): where do you land?",
+    whyItMatters:
+      "HOAs can reduce maintenance load but add rules and fees. This helps narrow options in the Capital District without over-filtering too early.",
+    ui: "segmented",
+    choices: [
+      { label: "Prefer HOA", value: "prefer_hoa" },
+      { label: "No HOA", value: "no_hoa" },
+      { label: "Indifferent", value: "indifferent" },
+      { label: "Not sure", value: "not_sure" },
     ],
   },
 ];

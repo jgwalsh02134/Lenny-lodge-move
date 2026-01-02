@@ -2,11 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { postJSON } from "./lib/api";
 import { AskLennyDrawer } from "./components/AskLennyDrawer";
-import type { HumorDial } from "./lib/lennySettings";
 import {
-  getHumorDial,
   getSeriousMode,
-  setHumorDial as persistHumorDial,
   setSeriousMode as persistSeriousMode,
 } from "./lib/lennySettings";
 import { AppShell } from "./components/AppShell";
@@ -50,7 +47,6 @@ function App() {
   // Research state
   const [researchQuery, setResearchQuery] = useState("");
   const [seriousMode, setSeriousMode] = useState(false);
-  const [humorDial, setHumorDial] = useState<HumorDial>("medium");
   const [allowedDomainsInput, setAllowedDomainsInput] = useState("");
   const [researchLoading, setResearchLoading] = useState(false);
   const [researchError, setResearchError] = useState<string | null>(null);
@@ -70,9 +66,13 @@ function App() {
   const [importError, setImportError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<ImportResponse | null>(null);
 
+  // Humor dial is now internal-only:
+  // - default "medium"
+  // - forced "low" when Serious Mode is on
+  const effectiveHumorDial = seriousMode ? "low" : "medium";
+
   useEffect(() => {
     // Hydrate persisted header modes
-    setHumorDial(getHumorDial());
     setSeriousMode(getSeriousMode());
 
     try {
@@ -95,10 +95,6 @@ function App() {
   }, []);
 
   useEffect(() => {
-    persistHumorDial(humorDial);
-  }, [humorDial]);
-
-  useEffect(() => {
     persistSeriousMode(seriousMode);
   }, [seriousMode]);
 
@@ -110,7 +106,7 @@ function App() {
       const data = await postJSON<ResearchResponse>("/api/ai/research", {
         query: researchQuery,
         seriousMode,
-        humorDial,
+        humorDial: effectiveHumorDial,
         allowedDomains,
       });
       setResearchResult(data);
@@ -138,14 +134,12 @@ function App() {
   return (
     <>
       <AppShell
-        humorDial={humorDial}
         seriousMode={seriousMode}
-        onHumorDialChange={(v) => setHumorDial(v)}
         onSeriousModeChange={(v) => setSeriousMode(v)}
       >
         {view === "intro" ? (
           <OnboardingIntro
-            humorDial={humorDial}
+            humorDial={effectiveHumorDial}
             onBegin={() => {
               try {
                 window.localStorage.setItem("lenny.welcomed", "1");
@@ -247,7 +241,7 @@ function App() {
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
                   <h2 style={{ marginTop: 0, marginBottom: 6, fontSize: 18 }}>API Tester</h2>
                   <div style={{ fontSize: 12, opacity: 0.7 }}>
-                    Modes: Serious {seriousMode ? "ON" : "OFF"} • Humor {humorDial}
+                    Modes: Serious {seriousMode ? "ON" : "OFF"}
                   </div>
                 </div>
 
@@ -429,7 +423,7 @@ function App() {
         )}
       </AppShell>
 
-      <AskLennyDrawer humorDial={humorDial} seriousMode={seriousMode} />
+      <AskLennyDrawer humorDial={effectiveHumorDial} seriousMode={seriousMode} />
     </>
   );
 }
